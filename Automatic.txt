@@ -1,0 +1,145 @@
+#include <Keypad.h>
+#include <Servo.h>
+#include <SoftwareSerial.h>
+//Create software serial object to communicate with SIM800L
+SoftwareSerial mySerial(3, 2); //SIM800L Tx & Rx is connected to Arduino #3 & #2
+String PIN = "6969";
+Servo servo;
+String enteredPin;
+int enteredPinPos = 0;
+bool toggleMotor = false;
+int wrongPin =0;
+const byte ROWS = 4;
+const byte COLS = 4;
+char hexaKeys[ROWS][COLS] = {
+ {'1', '2', '3', '\0'},
+ {'4', '5', '6', '\0'},
+ {'7', '8', '9', '\0'},
+ {'\0', '0', '\0', '\0'}
+};
+byte rowPins[ROWS] = {4,5,6,7};
+byte colPins[COLS] = {8,9,10,11};
+Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+void setup(){
+ enteredPin = " ";
+ servo.attach(13);
+ Serial.begin(9600);
+ mySerial.begin(9600);
+ Serial.println("Initializing...");
+ delay(1000);
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ updateSerial();
+}
+11
+
+void loop(){
+ char customKey = customKeypad.getKey();
+ if (customKey){
+ char key = (customKey);
+ enteredPin[enteredPinPos] =customKey;
+ Serial.print(key);
+ enteredPinPos++;
+ if(enteredPinPos ==4){
+ enteredPinPos=0;
+ Serial.println();
+ if(enteredPin == PIN){
+ Serial.println("Right Pin");
+ if(toggleMotor){
+ openLock();
+ Serial.println("Opening Door");
+ toggleMotor = !toggleMotor;
+ } else {
+ closeLock();
+ Serial.println("Closing Door");
+ toggleMotor = !toggleMotor;
+ }
+
+ } else {
+ Serial.println("Wrong Pin");
+ wrongPin++;
+ if(wrongPin ==1){
+ wrongPin=0;
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ updateSerial();
+ mySerial.println("AT+CMGF=1"); // Configuring TEXT mode
+ updateSerial();
+ mySerial.println("AT+CMGS=\"+918890525200\"");//change ZZ with country code and xxxxxxxxxxx
+with phone number to sms
+ updateSerial();
+ mySerial.print("Intruder alert"); //text content
+ Serial.println();
+ updateSerial();
+ mySerial.write(26);
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ updateSerial();
+ mySerial.println("AT+CMGF=1"); // Configuring TEXT mode
+12
+ updateSerial();
+ mySerial.println("AT+CMGS=\"+918696568834\"");//change ZZ with country code and xxxxxxxxxxx
+with phone number to sms
+ updateSerial();
+ mySerial.print("Intruder alert"); //text content
+ Serial.println();
+ updateSerial();
+ mySerial.write(26);
+ }
+ }
+ enteredPin = " ";
+ }
+ }
+}
+void openLock(){
+int angle = 0;
+ for(angle = 180; angle>=1; angle-=5) // command to move from 180 degrees to 0 degrees
+ {
+ servo.write(angle); //command to rotate the servo to the specified angle
+ delay(5);
+ }
+
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ updateSerial();
+mySerial.println("AT+CMGF=1"); // Configuring TEXT mode
+ updateSerial();
+ mySerial.println("AT+CMGS=\"+918890525200\"");//change ZZ with country code and xxxxxxxxxxx with
+phone number to sms
+ updateSerial();
+ mySerial.print("Door Open"); //text content
+ Serial.println();
+ updateSerial();
+ mySerial.write(26);
+}
+void closeLock(){
+ int angle = 0;
+ for(angle = 0; angle < 180; angle += 1) // command to move from 0 degrees to 180 degrees
+ {
+ servo.write(angle); //command to rotate the servo to the specified angle
+ delay(15);
+ }
+ 
+13
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ updateSerial();
+ mySerial.println("AT+CMGF=1"); // Configuring TEXT mode
+ updateSerial();
+ mySerial.println("AT+CMGS=\"+918890525200\"");//change ZZ with country code and xxxxxxxxxxx with
+phone number to sms
+ updateSerial();
+ mySerial.print("Door Close"); //text content
+ Serial.println();
+ updateSerial();
+ mySerial.write(26);
+}
+void updateSerial()
+{
+ delay(500);
+ while (Serial.available())
+ {
+ mySerial.write(Serial.read());//Forward what Serial received to Software Serial Port
+ }
+ Serial.println();
+ while(mySerial.available())
+ {
+ Serial.write(mySerial.read());//Forward what Software Serial received to Serial Port
+ }
+ Serial.println();
+}
